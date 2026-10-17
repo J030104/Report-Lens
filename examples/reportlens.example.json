@@ -1,0 +1,10 @@
+{
+  "repository": "../my-report",
+  "source": "report.tex",
+  "ref": "HEAD",
+  "tracked_paths": ["*.tex", "*.bib", "*.sty", "*.cls", "*.png", "*.jpg", "*.jpeg", "*.pdf", "*.svg", "*.eps"],
+  "build_command": ["pdflatex", "-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "{source}"],
+  "build_passes": 3,
+  "output_directory": ".reportlens",
+  "poll_seconds": 15
+}

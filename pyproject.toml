@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "report-lens"
+version = "0.1.0"
+description = "Read-only visual report comparisons from Git commits or PDFs"
+requires-python = ">=3.11"
+dependencies = ["pdfplumber>=0.11,<0.12", "pypdfium2>=4.30,<6", "Pillow>=10,<13", "reportlab>=4,<5"]
+
+[project.scripts]
+reportlens = "reportlens.cli:main"
+
+[tool.setuptools.package-data]
+reportlens = ["web/*"]
+
+[tool.setuptools.packages.find]
+include = ["reportlens*"]

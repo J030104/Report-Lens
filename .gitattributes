@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.pdf binary
+*.reportlens binary
+*.png binary
+*.jpg binary
