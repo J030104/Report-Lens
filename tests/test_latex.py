@@ -96,7 +96,8 @@ class SourceTests(unittest.TestCase):
         self.assertEqual([name for _, name in entries], ['Section: Methods & checks', 'Subsection: Methods & checks / Removed topic'])
         self.assertEqual(marked.count(r'\hypertarget{'), 2)
         front = front_matter('a'*40, 'b'*40, entries)
-        self.assertIn(r'\hyperlink{reportlens-change-1}{Section: Methods \& checks}', front)
+        self.assertIn(r'\hyperlink{reportlens-change-1}{Section~\ref*{reportlens-change-1-number}: Methods \& checks', front)
+        self.assertIn(r'\pageref*{reportlens-change-1-page}', front)
         self.assertNotIn('Untouched', front)
 
     def test_outline_visual_links_target_complete_versions(self):
@@ -143,9 +144,10 @@ Figure~\ref{fig:diagram} and Table~\ref{tab:data} retain their current numbering
                 first = doc.pages[0].extract_text()
                 self.assertIn('ReportLens comparison', first)
                 self.assertIn('Changed places', first)
-                self.assertIn('Section: Native typography', first)
-                self.assertIn('Figure (before): Complete diagram', first)
-                self.assertIn('Table (after): Full observations', first)
+                self.assertIn('Section 1: Native typography', first)
+                self.assertIn('Figure 1 (before): Complete diagram', first)
+                self.assertIn('Table 1 (after): Full observations', first)
+                self.assertIn('page 1', first)
                 self.assertNotIn('ReportLens comparison', doc.pages[-1].extract_text())
                 links = [a['data'].get('A', {}) for a in doc.pages[0].annots]
                 targets = [a.get('D', b'') for a in links if isinstance(a, dict)]

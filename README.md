@@ -158,7 +158,9 @@ packages and page geometry. Prose is selectable; TikZ drawings and tables stay
 typeset by LaTeX. Extra review text and old/new visuals may change pagination.
 A comparison key and clickable **Changed places** outline come first, followed
 by the source cover and report. The outline names affected sections and complete
-before/after figures and tables; selecting a name jumps to its location. Names
+before/after figures and tables, with their compiled section/figure/table numbers
+and printed report page numbers; selecting an entry jumps to its location.
+Unnumbered headings and captionless visuals are explicitly marked unnumbered. Names
 come from source headings and captions, so macro-generated names may be simplified.
 
 For PDF-only inputs, `auto` uses the `merged` reading copy: extracted prose is

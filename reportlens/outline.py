@@ -55,7 +55,10 @@ def add_outline(marked, objects, mask_source, token_pattern):
         parents = {k: v for k, v in parents.items() if k < level}
         parents[level] = plain_title(title)
         headings.append({"start": match.start(), "end": finish,
-                         "name": " / ".join(parents.values()), "kind": match.group(1).capitalize()})
+                         "name": " / ".join(parents.values()), "kind": match.group(1).capitalize(),
+                         "number": ("unnumbered" if "*" in match.group() else
+                                    r"\ifnum\value{secnumdepth}<" + str(level - 1) +
+                                    r"\relax unnumbered\else\the" + match.group(1) + r"\fi")})
     locations = {}
     visual_events = []
     change_pattern = re.compile(r"\\DIF(add|del)(?:FL)?\{")
@@ -79,19 +82,20 @@ def add_outline(marked, objects, mask_source, token_pattern):
         preceding = [h for h in headings if h["start"] <= match.start()]
         affected = ([preceding[-1]] if preceding else []) + [h for h in headings if match.start() < h["start"] < finish]
         if not affected:
-            locations.setdefault(begin.end(), (begin.end(), "Document opening"))
+            locations.setdefault(begin.end(), (begin.end(), "Document opening", "unnumbered"))
         for heading in affected:
-            locations.setdefault(heading["start"], (heading["end"], f'{heading["kind"]}: {heading["name"]}'))
-    events = [(pos, anchor_pos, name, None) for pos, (anchor_pos, name) in locations.items()]
-    events += [(pos, None, name, info) for pos, info, name in visual_events]
+            locations.setdefault(heading["start"], (heading["end"], f'{heading["kind"]}: {heading["name"]}', heading['number']))
+    events = [(pos, anchor_pos, name, None, number) for pos, (anchor_pos, name, number) in locations.items()]
+    events += [(pos, None, name, info, None) for pos, info, name in visual_events]
     entries, inserts = [], []
-    for i, (_, anchor_pos, name, info) in enumerate(sorted(events, key=lambda event: event[0])):
+    for i, (_, anchor_pos, name, info, number) in enumerate(sorted(events, key=lambda event: event[0])):
         anchor = f"reportlens-change-{i + 1}"
         entries.append((anchor, name))
         if info is not None:
             info["anchor"] = anchor
         else:
-            inserts.append((anchor_pos, r"\hypertarget{" + anchor + "}{}"))
+            inserts.append((anchor_pos, r"\hypertarget{" + anchor + r"}{}\label{" + anchor +
+                            r"-page}\ReportLensLocation{" + anchor + "-number}{" + number + "}"))
     for pos, insertion in sorted(inserts, reverse=True):
         marked = marked[:pos] + insertion + marked[pos:]
     return marked, entries
@@ -109,10 +113,21 @@ def front_matter(before, after, entries):
              "Additional review content can change pagination.\\par\\bigskip",
              r"{\Large\bfseries Changed places\par}\medskip",
              "Select a name below to jump to that location. Figure and table links "
-             "identify the complete before or after version.\\par"]
+             "identify the complete before or after version. Page numbers are the "
+             "printed report page numbers, not the PDF viewer's sheet count.\\par"]
     if entries:
         lines.append(r"\begin{enumerate}")
-        lines.extend(r"\item\hyperlink{" + anchor + "}{" + tex_escape(name) + "}" for anchor, name in entries)
+        for anchor, name in entries:
+            if ": " in name:
+                kind, title = name.split(": ", 1)
+                # Put the number before the before/after qualifier.
+                kind, separator, side = kind.partition(" (")
+                label = (tex_escape(kind) + r"~\ref*{" + anchor + "-number}" +
+                         (" (" + tex_escape(side) if separator else "") + ": " + tex_escape(title))
+            else:
+                label = tex_escape(name)
+            lines.append(r"\item\hyperlink{" + anchor + "}{" + label +
+                         r"\enspace--- page~\pageref*{" + anchor + "-page}}")
         lines.append(r"\end{enumerate}")
     else:
         lines.append("No inline text or whole-object changes were identified in the document body.\\par")

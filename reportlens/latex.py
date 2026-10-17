@@ -14,9 +14,9 @@ import shutil
 import tempfile
 
 from .repository import run
-from .outline import add_outline, front_matter
+from .outline import add_outline, front_matter, braced
 
-ENGINE_VERSION = 4
+ENGINE_VERSION = 5
 VISUALS = {"figure", "figure*", "table", "table*", "longtable", "tikzpicture",
            "tabular", "tabular*", "tabularx"}
 TOKEN = r"REPORTLENSOBJECT[a-f0-9]{40}"
@@ -162,7 +162,18 @@ def visual_source(token, kind, objects):
     color = "ReportLensRemoved" if kind == "del" else "ReportLensAdded"
     heading = r"{\small\color{" + color + r"}\textbf{" + label + r" - complete object}\par}\smallskip" + "\n"
     if info.get("anchor"):
-        heading = r"\hypertarget{" + info["anchor"] + "}{}" + heading
+        anchor = info["anchor"]
+        heading = r"\hypertarget{" + anchor + r"}{}\ReportLensLocation{" + anchor + "-page}{}" + heading
+        caption = re.search(r"\\caption(\*)?\s*(?:\[[^\]]*\]\s*)?\{", syntax_mask(source))
+        number = "unnumbered"
+        if caption and not caption.group(1):
+            number = r"\thetable" if environment in ("table", "table*", "longtable", "tabular", "tabular*", "tabularx") else r"\thefigure"
+        registration = r"\ReportLensLocation{" + anchor + "-number}{" + number + "}"
+        if caption:
+            _, end = braced(source, caption.end() - 1)
+            source = source[:end] + registration + source[end:]
+        else:
+            heading += registration
     if environment.rstrip("*") in ("figure", "table"):
         start = re.match(r"\\begin\{[^{}]+\}(?:\s*\[[^\]]*\])?", source)
         # Keep complete versions in document order; each is still typeset by
@@ -212,6 +223,9 @@ MARKUP = r"""
 \newcounter{ReportLensSavedFigure}
 \newcounter{ReportLensSavedTable}
 \newcounter{ReportLensSavedPage}
+\makeatletter
+\newcommand{\ReportLensLocation}[2]{\begingroup\edef\@currentlabel{#2}\label{#1}\endgroup}
+\makeatother
 """
 
 

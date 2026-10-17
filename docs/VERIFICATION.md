@@ -1,5 +1,18 @@
 # Verification history
 
+## Numbered outline references - 2026-10-17
+
+- The linked native outline includes compiled section, figure and table numbers
+  and printed report page numbers. References resolve through LaTeX labels;
+  starred headings and captionless objects are marked unnumbered.
+- The private report shows subsections 2.2.1 / 2.2.2 on printed pages 6 / 7 and
+  figure 2.3 on page 7. All three links resolve to the expected PDF destinations.
+  The public demo verifies old/new figure 1.1 on page 1 and table 1.1 on page 2.
+  Both first pages were rendered and visually reviewed; no unresolved references
+  remain. The native regression also checks numbering, page references and links.
+- All 48 local tests pass with native LaTeX integration enabled. The refreshed
+  GUI downloads a byte-identical copy of the reviewed PDF.
+
 ## Linked change outline - 2026-10-17
 
 - The native comparison key now precedes the source cover. Its numbered
