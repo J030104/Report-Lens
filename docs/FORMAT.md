@@ -16,6 +16,13 @@ document-wide text `edits`, summary counts, and comparison caveats. Pair IDs are
 zero-based. Missing sides of inserted/deleted pages are null. Text edit page
 references and page numbers are one-based. Width and height use PDF points.
 
+New writers add optional `pdf_export: {"layout": "merged", "version": 2}`
+metadata (`layout` may also be `pages`). This describes `diff.pdf`, not the
+package format version. Older packages remain readable; the viewer regenerates
+the selected layout in its local extracted copy when needed. The original
+package is unchanged. Cropped visual regions are embedded in the exported PDF;
+the package continues to retain full original page images and both input PDFs.
+
 `checksums.json` maps every other entry to its SHA-256 hash. A valid reader rejects
 missing/unlisted/duplicate entries, path traversal, symlinks, unknown filenames,
 unsupported format versions, invalid image/page references, and checksum failures.

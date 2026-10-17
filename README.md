@@ -22,6 +22,8 @@ project, or simulator.
 - Generate both outputs automatically when new report commits appear while the
   configured GUI is running. Notes-only commits are skipped according to your path filters.
 - Open a `.reportlens` file without the source repository or a LaTeX installation.
+- Export a **merged PDF** with unchanged prose once, red strikethrough removals,
+  and green underlined additions in the same text. Body text uses 12-point type.
 
 ## Quick start
 
@@ -118,6 +120,13 @@ reportlens compare --before-pdf old.pdf --after-pdf new.pdf --output review
 
 # Open the resulting portable package.
 reportlens gui review/pdf-comparison.reportlens
+
+# Keep the original alternating Before/After page layout instead.
+reportlens compare --config local.reportlens.json --pdf-layout pages
+
+# Export either layout from an existing package, without rebuilding the report.
+reportlens export review/pdf-comparison.reportlens --output merged.pdf
+reportlens export review/pdf-comparison.reportlens --output pages.pdf --pdf-layout pages
 ```
 
 ## Two output formats
@@ -125,12 +134,19 @@ reportlens gui review/pdf-comparison.reportlens
 | Output | Purpose |
 | --- | --- |
 | `.reportlens` | Self-contained ZIP-based package with both original PDFs, rendered pages, highlights, text edits, commit metadata, and the diff PDF. Open it in ReportLens on another computer. |
-| `.pdf` | Static review with a summary and full Before/After pages on consecutive sheets. Only changed page pairs are included. Page labels show which original version each sheet belongs to. |
+| `.pdf` | By default, a continuous merged reading copy of the complete report: unchanged prose once, with red removals and green additions inline. Changed visual regions retain their complete old and new versions. |
 
 The GUI places complete pages side by side in Diff view; individual Before/After
-views give more room. The exported diff PDF uses full-page images for faithful
-visual reproduction, so report text inside those images is not selectable. Both
-original, searchable PDFs remain inside the comparison package. The package
+views give more room. The default PDF reflows extracted text into larger, selectable
+type; its page breaks, fonts and positioning differ from the source report.
+Diagrams and tables remain images. A visual may move to the next sheet to keep it
+whole. The GUI's **Export PDF** uses the selected launch layout, merged by default.
+Opening an older package regenerates its export locally without modifying the input.
+
+Use `--pdf-layout pages` with `compare`, `gui`, or `export` for the original
+layout: a summary followed by complete Before/After images of changed page pairs
+on consecutive sheets. Text within those images is not selectable. Both
+original PDFs remain inside every comparison package. The package
 format and its limits are documented in [docs/FORMAT.md](docs/FORMAT.md).
 
 **Sharing a package shares both complete reports**, including unchanged pages.
@@ -150,10 +166,16 @@ Changed rendered pixels are classified as visual/layout changes when extracted
 text has not changed. This includes figures, tables, spacing, font changes,
 running headers, page numbers, and ordinary reflow. ReportLens does not claim
 that every visual change is a substantive edit. Figure/table filters use caption
-and PDF geometry hints; they are not perfect semantic detectors. Complete pages
-are preserved as the conservative fallback, including multi-page table portions
-on their respective pages. There is no automatic figure crop or multi-page table
-stitching in this release.
+and PDF geometry hints; they are not perfect semantic detectors. The merged
+export groups nearby drawing geometry into full-width visual regions, including
+captions. Changes retain both complete regions rather than individual changed
+cells. Unlocated captions and scanned pages fall back to complete page images;
+text with unsupported font glyphs retains its original line image. Regions can
+include surrounding material, and a shifted or resized region can be marked as
+changed. There is no semantic figure recognition or multi-page table stitching.
+Complex columns, formulas and PDF reading order may need inspection against the
+originals. The merged reading copy does not mark every font or spacing change;
+use the GUI or `--pdf-layout pages` for those visual details.
 
 Image-only/scanned PDFs can be compared visually; no OCR is performed. A zero
 word count does not mean a scanned report is unchanged. Identical raster output

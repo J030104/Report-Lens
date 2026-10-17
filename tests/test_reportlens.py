@@ -69,7 +69,7 @@ class ComparisonTests(TestCase):
     def test_complete_table_and_diagram_pages_kept(self):
         m=self.compare([['Table 1. Entire table','Alpha 10','Beta 20'],['Figure 1. Complete diagram','Input -> Output']],[['Table 1. Entire table','Alpha 15','Beta 20','Gamma 30'],['Figure 1. Complete diagram','Input -> Check -> Output']])
         self.assertIn('table',m['pairs'][0]['hints']);self.assertIn('figure',m['pairs'][1]['hints'])
-        export_pdf(self.root/'result',m,self.root/'diff.pdf')
+        export_pdf(self.root/'result',m,self.root/'diff.pdf',layout='pages')
         import pdfplumber
         with pdfplumber.open(self.root/'diff.pdf') as document:self.assertEqual(len(document.pages),5)
     def test_package_round_trip(self):

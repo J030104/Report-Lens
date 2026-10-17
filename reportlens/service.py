@@ -7,13 +7,16 @@ import time
 import uuid
 
 from .compare import create_comparison
-from .export import export_pdf
+from .export import export_pdf, PDF_EXPORT_VERSION
 from .package import load_package, save_package
 from .repository import Repository
 
 
 class Service:
-    def __init__(self, directory, config=None):
+    def __init__(self, directory, config=None, pdf_layout="merged"):
+        if pdf_layout not in ("merged", "pages"):
+            raise ValueError("PDF layout must be 'merged' or 'pages'.")
+        self.pdf_layout = pdf_layout
         self.root = Path(directory).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.repo = Repository(config) if config else None
@@ -61,7 +64,7 @@ class Service:
         b = self.repo.build(after, self.update)
         # Build identities separate changed compiler/config caches.
         digest = hashlib.sha256(a.read_bytes()+b.read_bytes()).hexdigest()[:12]
-        name = f"{before[:8]}--{after[:8]}-{digest}"
+        name = f"{before[:8]}--{after[:8]}-{digest}-{self.pdf_layout}-v{PDF_EXPORT_VERSION}"
         destination = self.root / "comparisons" / name
         package = self.root / f"{name}.reportlens"
         if package.is_file():
@@ -72,6 +75,8 @@ class Service:
         self.activate(destination, manifest)
 
     def compare_files(self, before, after, name="pdf-comparison"):
+        if self.pdf_layout != "merged":
+            name += "-" + self.pdf_layout
         destination = self.root / "comparisons" / (name + "-" + uuid.uuid4().hex[:8])
         manifest = create_comparison(before, after, destination, progress=self.update)
         self.finish(destination, manifest, name)
@@ -79,7 +84,7 @@ class Service:
 
     def finish(self, directory, manifest, name):
         self.update("Writing diff PDF and portable comparison package")
-        export_pdf(directory, manifest, directory / "diff.pdf")
+        self.write_pdf(directory, manifest)
         save_package(directory, self.root / f"{name}.reportlens")
         shutil.copyfile(directory / "diff.pdf", self.root / f"{name}.pdf")
         (self.root / "latest.json").write_text(json.dumps({"package": f"{name}.reportlens", "pdf": f"{name}.pdf"}), encoding="utf-8")
@@ -87,7 +92,14 @@ class Service:
     def open_package(self, path):
         destination = self.root / "opened" / uuid.uuid4().hex
         manifest = load_package(path, destination)
+        if manifest.get("pdf_export") != {"layout": self.pdf_layout, "version": PDF_EXPORT_VERSION}:
+            self.write_pdf(destination, manifest)
         self.activate(destination, manifest)
+
+    def write_pdf(self, directory, manifest):
+        export_pdf(directory, manifest, directory / "diff.pdf", layout=self.pdf_layout)
+        manifest["pdf_export"] = {"layout": self.pdf_layout, "version": PDF_EXPORT_VERSION}
+        (directory / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
 
     def monitor_loop(self):
         while not self.stop.wait(self.repo.config.poll_seconds if self.repo else 15):

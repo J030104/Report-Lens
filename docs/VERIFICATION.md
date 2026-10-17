@@ -1,4 +1,24 @@
-# Initial release verification
+# Verification history
+
+## Merged PDF default - 2026-10-17
+
+- 34 local tests pass on Windows/Python 3.13, including selectable inline
+  replacements/deletions, unchanged text and visuals appearing once, complete
+  changed diagrams, multiline captions, and conservative borderless-table fallback.
+- CLI tests exercise default merged export and `--pdf-layout pages`, including
+  export from existing packages. Opening old packages regenerates the PDF in a
+  local copy and leaves the input package byte-for-byte unchanged.
+- The synthetic public example and a private multi-page report comparison were
+  regenerated. PDF pages were rendered with Poppler and reviewed for readability,
+  complete visuals, paragraph flow and caption clipping. The private report and
+  its comparison artifacts remain excluded from this repository.
+- The existing local GUI was restarted with the merged default. Original
+  Before/After/Diff views remain available; PDF export uses the merged layout.
+- Merged text uses embedded fonts at 12 points. This is a reflowed reading copy;
+  original typography/pagination and visual-only formatting changes are reviewed
+  through the GUI or the alternate `pages` export. See README for extraction limits.
+
+## Initial release
 
 Verified on Windows with Python 3.13 on 2026-10-17.
 
@@ -26,6 +46,6 @@ Windows is the locally tested platform. GitHub Actions is configured to check
 Windows and Linux on Python 3.11 and 3.13; a configured workflow is not itself
 evidence of a completed CI run. Review the Actions results for each commit.
 
-Known limitations are documented in the README: heuristic page matching and
-figure/table navigation, rasterized diff PDF pages, no OCR, and monitoring only
-while the application process is running.
+Initial limitations included heuristic page matching and figure/table navigation,
+rasterized diff PDF pages, no OCR, and monitoring only while the application
+process is running. The merged export above supersedes the raster-only default.

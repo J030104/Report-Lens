@@ -24,11 +24,28 @@ def main():
     compare.add_argument("--before-pdf")
     compare.add_argument("--after-pdf")
     compare.add_argument("--output", default=".reportlens")
+    export = sub.add_parser("export", help="Export a PDF from an existing .reportlens package")
+    export.add_argument("package")
+    export.add_argument("--output", required=True, help="Destination PDF filename")
+    for command in (gui, compare, export):
+        command.add_argument("--pdf-layout", choices=("merged", "pages"), default="merged",
+                             help="PDF layout: merged prose (default) or consecutive original pages")
     args = parser.parse_args()
     try:
+        if args.action == "export":
+            from tempfile import TemporaryDirectory
+            from .package import load_package
+            from .export import export_pdf
+            if Path(args.output).resolve() == Path(args.package).resolve():
+                parser.error("The PDF output must differ from the input package.")
+            with TemporaryDirectory(prefix="reportlens-export-") as folder:
+                manifest = load_package(args.package, folder)
+                export_pdf(folder, manifest, args.output, layout=args.pdf_layout)
+            print(f"PDF: {Path(args.output).resolve()}")
+            return
         config = Config.load(args.config) if args.config else None
         output = config.output_directory if config else args.output
-        service = Service(output, config)
+        service = Service(output, config, pdf_layout=args.pdf_layout)
         service.update = lambda message: print(message, flush=True)
         if args.action == "compare":
             if args.before_pdf or args.after_pdf:

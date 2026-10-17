@@ -1,4 +1,4 @@
-"""Readable static review: full-size before/after pages, never tiny table crops."""
+"""Static PDF exports: merged prose by default, original pages on request."""
 from pathlib import Path
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
@@ -20,7 +20,19 @@ def wrapped(canvas_, text, x, y, width, font="Helvetica", size=10, leading=15):
     return y
 
 
-def export_pdf(directory, manifest, target):
+PDF_EXPORT_VERSION = 2
+
+
+def export_pdf(directory, manifest, target, layout="merged"):
+    if layout == "merged":
+        from .merged import export_merged
+        return export_merged(directory, manifest, target)
+    if layout == "pages":
+        return export_pages(directory, manifest, target)
+    raise ValueError("PDF layout must be 'merged' or 'pages'.")
+
+
+def export_pages(directory, manifest, target):
     directory, target = Path(directory), Path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(".partial")
