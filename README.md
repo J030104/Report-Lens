@@ -156,7 +156,10 @@ views give more room. The default `auto` layout uses LaTeX for a configured `.te
 source: it compiles a temporary diff using the report's own class, typography,
 packages and page geometry. Prose is selectable; TikZ drawings and tables stay
 typeset by LaTeX. Extra review text and old/new visuals may change pagination.
-The source cover is retained, with a comparison key appended at the end.
+A comparison key and clickable **Changed places** outline come first, followed
+by the source cover and report. The outline names affected sections and complete
+before/after figures and tables; selecting a name jumps to its location. Names
+come from source headings and captions, so macro-generated names may be simplified.
 
 For PDF-only inputs, `auto` uses the `merged` reading copy: extracted prose is
 reflowed into selectable 12-point type and visual regions remain images. This

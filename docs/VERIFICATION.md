@@ -1,5 +1,24 @@
 # Verification history
 
+## Linked change outline - 2026-10-17
+
+- The native comparison key now precedes the source cover. Its numbered
+  **Changed places** outline links to affected source headings and complete
+  before/after figures and tables, using their names and captions.
+- 48 local tests pass with native integration enabled. The compiled PDF test
+  verifies the outline is on the first page, names the changed locations, has
+  five internal links, and no longer has the comparison key at the end.
+- Section targets follow their headings; visual targets sit inside their
+  complete objects. The front matter restores the report's page counter and
+  uses a separate page-anchor prefix to avoid conflicting PDF destinations.
+- The 53-page report example has three named destinations: its two changed
+  sections on PDF pages 16/17 and its added figure on page 17. All destinations
+  resolve, and extracted text on every original body page matches the previous
+  native export. The new first page and following cover were rendered and reviewed.
+- Previous CI failures were traced to a missing TeX Live `ulem` dependency
+  (`texlive-plain-generic`) and a Windows test's short-path expectation. The
+  dependency list and test path normalization are corrected.
+
 ## Native LaTeX default - 2026-10-17
 
 The owner rejected the reflowed PDF's appearance. The default for `.tex`

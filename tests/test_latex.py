@@ -9,7 +9,8 @@ import unittest
 import pdfplumber
 from PIL import Image
 from reportlens.export import export_pdf
-from reportlens.latex import flatten, protect_visuals, restore_visuals, visual_spans
+from reportlens.latex import flatten, protect_visuals, restore_visuals, visual_spans, syntax_mask, TOKEN
+from reportlens.outline import add_outline, front_matter
 from reportlens.repository import Config, Repository
 from reportlens.service import Service
 
@@ -50,8 +51,8 @@ class SourceTests(unittest.TestCase):
         self.assertNotEqual(old,new)
         restored=restore_visuals(r'\DIFdel{'+old+'\n}'+r'\DIFadd{'+new+'\n}',objects)
         self.assertEqual(restored.count(r'\begin{figure}'),2)
-        self.assertIn((a/'plot.png').as_posix(),restored)
-        self.assertIn((b/'plot.png').as_posix(),restored)
+        self.assertIn((a/'plot.png').resolve().as_posix(),restored)
+        self.assertIn((b/'plot.png').resolve().as_posix(),restored)
         self.assertIn(r'\label{reportlens-old-',restored)
         self.assertIn(r'\setcounter{figure}{\value{ReportLensSavedFigure}}',restored)
     def test_unchanged_visual_is_not_duplicated(self):
@@ -85,6 +86,30 @@ class SourceTests(unittest.TestCase):
                 self.assertEqual(write.call_args.kwargs,{'layout':'merged'})
             self.assertEqual(service.pdf_layout,'latex')
 
+    def test_outline_names_changed_sections_and_ignores_unchanged_locations(self):
+        source = (r'\documentclass{article}\begin{document}\section{Unchanged}Stable.'
+                  r'\section{Methods \& \textbf{checks}}\DIFdel{old}\DIFadd{new}'
+                  r'\subsection{Removed topic}\DIFdel{Removed paragraph}'
+                  '\n% \\DIFadd{comment only}\n'
+                  r'\section{Untouched}Stable.\end{document}')
+        marked, entries = add_outline(source, {}, syntax_mask, TOKEN)
+        self.assertEqual([name for _, name in entries], ['Section: Methods & checks', 'Subsection: Methods & checks / Removed topic'])
+        self.assertEqual(marked.count(r'\hypertarget{'), 2)
+        front = front_matter('a'*40, 'b'*40, entries)
+        self.assertIn(r'\hyperlink{reportlens-change-1}{Section: Methods \& checks}', front)
+        self.assertNotIn('Untouched', front)
+
+    def test_outline_visual_links_target_complete_versions(self):
+        objects = {}
+        old = protect_visuals(r'\begin{table}\caption{Readings \& checks}Old\end{table}', self.root, 'before', objects).strip()
+        new = protect_visuals(r'\begin{table}\caption{Readings \& checks}New\end{table}', self.root, 'after', objects).strip()
+        source = r'\begin{document}\section{Data}\DIFdel{'+old+r'}\DIFadd{'+new+r'}\end{document}'
+        marked, entries = add_outline(source, objects, syntax_mask, TOKEN)
+        restored = restore_visuals(marked, objects)
+        self.assertEqual([name for _, name in entries], ['Table (before): Readings & checks', 'Table (after): Readings & checks'])
+        for anchor, _ in entries:
+            self.assertIn(r'\hypertarget{'+anchor+'}{}', restored)
+
 
 @unittest.skipUnless(os.environ.get('REPORTLENS_TEST_LATEX')=='1','Set REPORTLENS_TEST_LATEX=1 with LaTeX/latexdiff installed')
 class NativeIntegrationTests(unittest.TestCase):
@@ -115,6 +140,16 @@ Figure~\ref{fig:diagram} and Table~\ref{tab:data} retain their current numbering
             data=(service.current/'diff.pdf').read_bytes()
             with pdfplumber.open(service.current/'diff.pdf') as doc:
                 text='\n'.join(p.extract_text() or '' for p in doc.pages)
+                first = doc.pages[0].extract_text()
+                self.assertIn('ReportLens comparison', first)
+                self.assertIn('Changed places', first)
+                self.assertIn('Section: Native typography', first)
+                self.assertIn('Figure (before): Complete diagram', first)
+                self.assertIn('Table (after): Full observations', first)
+                self.assertNotIn('ReportLens comparison', doc.pages[-1].extract_text())
+                links = [a['data'].get('A', {}) for a in doc.pages[0].annots]
+                targets = [a.get('D', b'') for a in links if isinstance(a, dict)]
+                self.assertEqual(len([t for t in targets if isinstance(t, bytes) and t.startswith(b'reportlens-change-')]), 5)
                 fonts={c['fontname'] for p in doc.pages for c in p.chars}
                 self.assertTrue(any('LMRoman' in f for f in fonts))
                 self.assertEqual(text.count('Stable prose appears once.'),1)

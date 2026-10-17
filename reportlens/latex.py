@@ -14,8 +14,9 @@ import shutil
 import tempfile
 
 from .repository import run
+from .outline import add_outline, front_matter
 
-ENGINE_VERSION = 3
+ENGINE_VERSION = 4
 VISUALS = {"figure", "figure*", "table", "table*", "longtable", "tikzpicture",
            "tabular", "tabular*", "tabularx"}
 TOKEN = r"REPORTLENSOBJECT[a-f0-9]{40}"
@@ -160,6 +161,8 @@ def visual_source(token, kind, objects):
     label = "BEFORE / removed" if kind == "del" else "AFTER / added"
     color = "ReportLensRemoved" if kind == "del" else "ReportLensAdded"
     heading = r"{\small\color{" + color + r"}\textbf{" + label + r" - complete object}\par}\smallskip" + "\n"
+    if info.get("anchor"):
+        heading = r"\hypertarget{" + info["anchor"] + "}{}" + heading
     if environment.rstrip("*") in ("figure", "table"):
         start = re.match(r"\\begin\{[^{}]+\}(?:\s*\[[^\]]*\])?", source)
         # Keep complete versions in document order; each is still typeset by
@@ -198,6 +201,7 @@ MARKUP = r"""
 % ReportLens: retain the source document class, fonts and page geometry.
 \usepackage{xcolor}
 \usepackage{float}
+\usepackage{hyperref}
 \definecolor{ReportLensAdded}{HTML}{08774A}
 \definecolor{ReportLensRemoved}{HTML}{B52A3B}
 \renewcommand{\DIFadd}[1]{{\protect\color{ReportLensAdded}\uline{#1}}}
@@ -207,6 +211,7 @@ MARKUP = r"""
 \renewcommand{\DIFdelend}{\ReportLensGap}
 \newcounter{ReportLensSavedFigure}
 \newcounter{ReportLensSavedTable}
+\newcounter{ReportLensSavedPage}
 """
 
 
@@ -257,20 +262,13 @@ def build_latex_diff(repo, before, after, progress=lambda _: None):
             marked = run([*command, "--encoding=utf8", "--graphics-markup=none", "--math-markup=whole",
                           "--type=UNDERLINE", "--disable-citation-markup", str(root/"before.tex"), str(root/"after.tex")],
                          cwd=new_source.parent, timeout=300).decode("utf-8")
+            marked, entries = add_outline(marked, objects, syntax_mask, TOKEN)
             marked = restore_visuals(marked, objects)
             start = re.search(r"\\begin\{document\}", syntax_mask(marked))
             if not start:
                 raise ValueError("The source must contain a LaTeX document environment.")
-            marked = marked[:start.start()] + MARKUP + marked[start.start():]
-            # Add a native LaTeX legend at the end, leaving the cover untouched.
-            note = (r"\clearpage\section*{ReportLens comparison}" + "\n" +
-                    r"Before: \texttt{" + before[:12] + r"}\par After: \texttt{" + after[:12] + r"}\par" + "\n" +
-                    r"\DIFdel{Red strikethrough: removed text.}\par\DIFadd{Green underline: added text.}\par" + "\n" +
-                    "Changed figures and tables retain complete old and new versions. "
-                    "This comparison uses the report's LaTeX class, fonts and layout settings. "
-                    "Additional review content can change pagination.\n")
-            end = re.search(r"\\end\{document\}", syntax_mask(marked))
-            marked = marked[:end.start()] + note + marked[end.start():]
+            marked = (marked[:start.start()] + MARKUP + marked[start.start():start.end()] + "\n" +
+                      front_matter(before, after, entries) + marked[start.end():])
             new_source.write_text(marked, encoding="utf-8")
             (cache/"diff.tex").write_text(marked, encoding="utf-8")
             args = [arg.replace("{source}", new_source.name) for arg in repo.config.build_command]
