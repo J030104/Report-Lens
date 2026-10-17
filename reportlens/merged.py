@@ -95,6 +95,22 @@ def visual_bands(page, lines):
                 candidates.append((gap, i))
         if candidates:
             _, i = min(candidates)
+            # A single figure may contain disconnected rows/panels. Collect
+            # preceding geometry until ordinary prose or another caption forms
+            # a boundary; do not emit a changed panel without its siblings.
+            if merged[i][1] <= top+4:
+                while i > 0:
+                    previous, current = merged[i-1], merged[i]
+                    between = [other for other in lines
+                               if min(w["top"] for w in other) >= previous[1] and
+                               max(w["bottom"] for w in other) <= current[0]]
+                    barrier = any(CAPTION.match(line_text(other)) or
+                                  max(w["x1"] for w in other)-min(w["x0"] for w in other) > page.width*.65
+                                  for other in between)
+                    if barrier or current[0]-previous[1] > 120:
+                        break
+                    merged[i-1:i+1] = [(previous[0], current[1])]
+                    i -= 1
             merged[i] = (min(top-4, merged[i][0]), max(bottom+4, merged[i][1]))
     # Expand through complete text lines crossing a band, including captions.
     for i, (top, bottom) in enumerate(merged):

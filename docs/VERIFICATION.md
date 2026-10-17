@@ -2,9 +2,10 @@
 
 ## Merged PDF default - 2026-10-17
 
-- 34 local tests pass on Windows/Python 3.13, including selectable inline
+- 35 local tests pass on Windows/Python 3.13, including selectable inline
   replacements/deletions, unchanged text and visuals appearing once, complete
-  changed diagrams, multiline captions, and conservative borderless-table fallback.
+  changed diagrams (including disconnected panels), multiline captions, and
+  conservative borderless-table fallback.
 - CLI tests exercise default merged export and `--pdf-layout pages`, including
   export from existing packages. Opening old packages regenerates the PDF in a
   local copy and leaves the input package byte-for-byte unchanged.

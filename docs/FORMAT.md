@@ -16,7 +16,7 @@ document-wide text `edits`, summary counts, and comparison caveats. Pair IDs are
 zero-based. Missing sides of inserted/deleted pages are null. Text edit page
 references and page numbers are one-based. Width and height use PDF points.
 
-New writers add optional `pdf_export: {"layout": "merged", "version": 2}`
+New writers add optional `pdf_export: {"layout": "merged", "version": 3}`
 metadata (`layout` may also be `pages`). This describes `diff.pdf`, not the
 package format version. Older packages remain readable; the viewer regenerates
 the selected layout in its local extracted copy when needed. The original

@@ -20,7 +20,7 @@ def wrapped(canvas_, text, x, y, width, font="Helvetica", size=10, leading=15):
     return y
 
 
-PDF_EXPORT_VERSION = 2
+PDF_EXPORT_VERSION = 3
 
 
 def export_pdf(directory, manifest, target, layout="merged"):

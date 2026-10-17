@@ -74,6 +74,19 @@ class MergedTests(unittest.TestCase):
         fonts(); blocks = extract_blocks(self.directory, self.manifest, 'after')
         prose = ' '.join(w for b in blocks if b['type'] == 'text' for w in b['words'])
         self.assertEqual(prose, 'Separate prose follows.')
+    def test_disconnected_panels_with_one_caption_stay_together(self):
+        self.compare(['Introductory prose.'], ['Introductory prose.'])
+        c = canvas.Canvas(str(self.b), invariant=1)
+        for y, label in ((650, 'First panel'), (520, 'Second panel'), (390, 'Third panel')):
+            c.rect(60, y, 400, 70)
+            c.drawString(80, y+30, label)
+        c.drawString(60, 360, 'Figure 1. All three panels belong together.')
+        c.showPage(); c.save()
+        m = create_comparison(self.a, self.b, self.directory)
+        fonts(); blocks = extract_blocks(self.directory, m, 'after')
+        visuals = [b for b in blocks if b['type'] == 'visual']
+        self.assertEqual(len(visuals), 1)
+        self.assertGreater(visuals[0]['height'], 350)
     def test_geometry_keeps_entire_diagram_and_caption(self):
         self.compare(['Introductory prose.'], ['Revised introductory prose.'], visual=True)
         fonts()
