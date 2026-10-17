@@ -1,5 +1,6 @@
-"""Static PDF exports: merged prose by default, original pages on request."""
+"""Export embedded native LaTeX, reflowed prose, or original-page comparisons."""
 from pathlib import Path
+import shutil
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 from reportlab.lib.utils import ImageReader
@@ -20,16 +21,29 @@ def wrapped(canvas_, text, x, y, width, font="Helvetica", size=10, leading=15):
     return y
 
 
-PDF_EXPORT_VERSION = 3
+PDF_EXPORT_VERSION = 4
 
 
-def export_pdf(directory, manifest, target, layout="merged"):
+def export_pdf(directory, manifest, target, layout="auto"):
+    if layout == "auto":
+        layout = "latex" if manifest.get("pdf_export", {}).get("layout") == "latex" else "merged"
+    if layout == "latex":
+        source = Path(directory) / "diff.pdf"
+        if manifest.get("pdf_export", {}).get("layout") != "latex" or not source.is_file():
+            raise ValueError("This package has no compiled LaTeX diff. Compare the source repository with --pdf-layout latex first.")
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.resolve() != target.resolve():
+            temporary = target.with_suffix(".partial")
+            shutil.copyfile(source, temporary)
+            temporary.replace(target)
+        return target
     if layout == "merged":
         from .merged import export_merged
         return export_merged(directory, manifest, target)
     if layout == "pages":
         return export_pages(directory, manifest, target)
-    raise ValueError("PDF layout must be 'merged' or 'pages'.")
+    raise ValueError("PDF layout must be auto, latex, merged or pages.")
 
 
 def export_pages(directory, manifest, target):

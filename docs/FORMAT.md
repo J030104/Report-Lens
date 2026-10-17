@@ -16,12 +16,17 @@ document-wide text `edits`, summary counts, and comparison caveats. Pair IDs are
 zero-based. Missing sides of inserted/deleted pages are null. Text edit page
 references and page numbers are one-based. Width and height use PDF points.
 
-New writers add optional `pdf_export: {"layout": "merged", "version": 3}`
-metadata (`layout` may also be `pages`). This describes `diff.pdf`, not the
+New writers add optional `pdf_export: {"layout": "latex", "version": 4,
+"engine": "latexdiff"}` metadata (`layout` may also be `merged` or `pages`,
+without an engine field). This describes `diff.pdf`, not the
 package format version. Older packages remain readable; the viewer regenerates
 the selected layout in its local extracted copy when needed. The original
-package is unchanged. Cropped visual regions are embedded in the exported PDF;
-the package continues to retain full original page images and both input PDFs.
+package is unchanged. Native LaTeX PDFs are preserved on opening and default
+export, even without the original source or compiler. `merged`/`pages` can be
+regenerated from the embedded originals; native LaTeX cannot be reconstructed
+from PDF-only inputs. The package contains no TeX source or build commands.
+Reflowed visual crops are embedded in `merged` PDFs; full original page images
+and both input PDFs remain in every package.
 
 `checksums.json` maps every other entry to its SHA-256 hash. A valid reader rejects
 missing/unlisted/duplicate entries, path traversal, symlinks, unknown filenames,

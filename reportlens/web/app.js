@@ -93,6 +93,7 @@ async function load() {
   $('subtitle').textContent=`${manifest.before.label} → ${manifest.after.label}`;
   $('notes').textContent=manifest.notes.join(' ');
   for(const [id,path] of [['download-package','package'],['download-pdf','diff']]) { $(id).href=url('/download/'+path+'?session='+manifest.session); $(id).hidden=false; }
+  $('download-pdf').textContent=manifest.pdf_export?.layout==='latex'?'Export LaTeX PDF ↗':'Export PDF ↗';
   if(manifest.before.commit) $('before').value=manifest.before.commit;
   if(manifest.after.commit) $('after').value=manifest.after.commit;
   filterPages(true);

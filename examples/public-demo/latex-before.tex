@@ -1,0 +1,35 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[margin=27mm]{geometry}
+\usepackage[T1]{fontenc}\usepackage{lmodern}
+\usepackage{xcolor,graphicx,float,booktabs,hyperref}
+\setlength{\parindent}{0pt}\setlength{\parskip}{0.6em}
+\begin{document}
+\chapter{A small garden, measured}
+\section{Method}
+The study follows four raised beds over six weeks.
+We record soil moisture before watering each morning.
+
+The initial method uses a single calibration at setup.
+
+These invented observations demonstrate a report comparison.
+\begin{figure}[H]\centering
+\fbox{\begin{minipage}{0.8\linewidth}\centering
+Read sensor\par\medskip$\downarrow$\par\medskip
+Average readings
+\par\medskip$\downarrow$\par\medskip Save daily record
+\end{minipage}}
+\caption{Complete daily measurement workflow.}\label{fig:workflow}
+\end{figure}
+\section{Observations}
+Figure~\ref{fig:workflow} shows the workflow. Table~\ref{tab:observations} gives the complete observations.
+\begin{table}[H]\centering
+\caption{Invented measurements for demonstration only.}\label{tab:observations}
+\begin{tabular}{lcc}\toprule
+Bed & Mean moisture & Observations\\\midrule
+A & 38\% & 7\\
+B & 43\% & 7\\
+C & 39\% & 7\\
+
+\bottomrule\end{tabular}
+\end{table}
+\end{document}

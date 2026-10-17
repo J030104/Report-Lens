@@ -14,6 +14,6 @@ try {
     } elseif (Test-Path -LiteralPath 'local.reportlens.json') {
         & $reportLensPython -m reportlens gui --config local.reportlens.json
     } else {
-        & $reportLensPython -m reportlens gui examples/public-demo/garden-review.reportlens
+        & $reportLensPython -m reportlens gui examples/public-demo/latex-review.reportlens
     }
 } finally { Pop-Location }

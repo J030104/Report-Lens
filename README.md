@@ -22,13 +22,15 @@ project, or simulator.
 - Generate both outputs automatically when new report commits appear while the
   configured GUI is running. Notes-only commits are skipped according to your path filters.
 - Open a `.reportlens` file without the source repository or a LaTeX installation.
-- Export a **merged PDF** with unchanged prose once, red strikethrough removals,
-  and green underlined additions in the same text. Body text uses 12-point type.
+- Export a **native LaTeX diff PDF** for LaTeX repositories: the report's document
+  class, fonts, headings, margins and captions remain in use, with red
+  strikethrough removals and green underlined additions in the same text.
 
 ## Quick start
 
-Requirements: **Python 3.11+** and a modern browser. Git and a LaTeX distribution
-are needed only when rebuilding reports from committed LaTeX sources.
+Requirements: **Python 3.11+** and a modern browser. Building native comparisons
+from LaTeX commits also requires Git, a LaTeX distribution, **latexdiff and Perl**.
+Opening a prepared `.reportlens` package requires none of those build tools.
 
 ```sh
 git clone https://github.com/J030104/Report-Lens.git
@@ -41,7 +43,7 @@ Activate the environment on Windows:
 ```powershell
 .venv\Scripts\Activate.ps1
 python -m pip install -e .
-reportlens gui examples/public-demo/garden-review.reportlens
+reportlens gui examples/public-demo/latex-review.reportlens
 ```
 
 Or on macOS / Linux:
@@ -49,7 +51,7 @@ Or on macOS / Linux:
 ```sh
 source .venv/bin/activate
 python -m pip install -e .
-reportlens gui examples/public-demo/garden-review.reportlens
+reportlens gui examples/public-demo/latex-review.reportlens
 ```
 
 The custom GUI opens in your browser and runs entirely on your computer. Keep
@@ -61,8 +63,17 @@ On Windows, after installation you can double-click `Start-ReportLens.cmd`.
 It opens your `local.reportlens.json` configuration if present, otherwise the
 public demo. Drop a `.reportlens` file onto that launcher to open it directly.
 
-The [public example](examples/public-demo) contains only an invented garden study.
-It demonstrates prose edits, a changed workflow diagram, and a changed table.
+The [public examples](examples/public-demo) contain only an invented garden study.
+`latex-review` demonstrates native LaTeX prose edits, a complete changed workflow
+diagram and table. Its two `.tex` sources are included. `garden-review` demonstrates
+the reflowed reading-copy layout for PDF-only inputs.
+
+For source comparisons, install `latexdiff`, `ulem`, `xcolor`, and `float` through
+your TeX distribution. TeX Live normally supplies Perl on Unix; Windows also needs
+Perl. ReportLens can use Git for Windows' bundled Perl with MiKTeX's standalone
+`latexdiff-so` script. Alternatively set `latexdiff_command` in the local config
+to an argument array such as `["perl", "/path/to/latexdiff-so"]`. No download or
+installation happens automatically inside ReportLens.
 
 ## Connect a report repository
 
@@ -99,8 +110,8 @@ them if your repository also contains unrelated documents.
 Git snapshots build in temporary directories. ReportLens never checks out a
 revision in your working tree, stages files, commits, pushes, or edits your
 report. Uncommitted changes are intentionally excluded. PDFs are cached by
-commit and build configuration. Clear the output directory's `cache` folder
-after changing compiler versions, installed fonts, or TeX packages.
+commit and build configuration. After changing compiler versions, installed fonts,
+or TeX packages, use a fresh output directory to rebuild all outputs and caches.
 
 ## Automatic output
 
@@ -124,6 +135,10 @@ reportlens gui review/pdf-comparison.reportlens
 # Keep the original alternating Before/After page layout instead.
 reportlens compare --config local.reportlens.json --pdf-layout pages
 
+# Explicitly request native LaTeX, or the earlier reflowed reading copy.
+reportlens compare --config local.reportlens.json --pdf-layout latex
+reportlens compare --config local.reportlens.json --pdf-layout merged
+
 # Export either layout from an existing package, without rebuilding the report.
 reportlens export review/pdf-comparison.reportlens --output merged.pdf
 reportlens export review/pdf-comparison.reportlens --output pages.pdf --pdf-layout pages
@@ -134,14 +149,24 @@ reportlens export review/pdf-comparison.reportlens --output pages.pdf --pdf-layo
 | Output | Purpose |
 | --- | --- |
 | `.reportlens` | Self-contained ZIP-based package with both original PDFs, rendered pages, highlights, text edits, commit metadata, and the diff PDF. Open it in ReportLens on another computer. |
-| `.pdf` | By default, a continuous merged reading copy of the complete report: unchanged prose once, with red removals and green additions inline. Changed visual regions retain their complete old and new versions. |
+| `.pdf` | A continuous inline diff. By default, `.tex` repositories produce a native LaTeX report; PDF-only comparisons produce a reflowed reading copy. Changed figures/tables retain complete old and new versions. |
 
 The GUI places complete pages side by side in Diff view; individual Before/After
-views give more room. The default PDF reflows extracted text into larger, selectable
-type; its page breaks, fonts and positioning differ from the source report.
-Diagrams and tables remain images. A visual may move to the next sheet to keep it
-whole. The GUI's **Export PDF** uses the selected launch layout, merged by default.
-Opening an older package regenerates its export locally without modifying the input.
+views give more room. The default `auto` layout uses LaTeX for a configured `.tex`
+source: it compiles a temporary diff using the report's own class, typography,
+packages and page geometry. Prose is selectable; TikZ drawings and tables stay
+typeset by LaTeX. Extra review text and old/new visuals may change pagination.
+The source cover is retained, with a comparison key appended at the end.
+
+For PDF-only inputs, `auto` uses the `merged` reading copy: extracted prose is
+reflowed into selectable 12-point type and visual regions remain images. This
+alternative changes the source fonts and layout. It remains available explicitly
+for any input with `--pdf-layout merged`.
+
+The GUI's **Export LaTeX PDF** / **Export PDF** link downloads the prepared layout.
+Native LaTeX PDFs remain embedded when opening or exporting a package, so sharing
+them does not require the source repository or a compiler. Existing packages can
+be re-exported with `--pdf-layout pages` or `merged` without changing the input.
 
 Use `--pdf-layout pages` with `compare`, `gui`, or `export` for the original
 layout: a summary followed by complete Before/After images of changed page pairs
@@ -155,6 +180,20 @@ configuration files are ignored by Git; only synthetic examples belong in this
 repository.
 
 ## How comparison works — and its limits
+
+For native LaTeX export, [latexdiff](https://ctan.org/pkg/latexdiff) marks prose
+and math. ReportLens protects complete figure/table environments, detects changed
+bytes in literal image files even when filenames stay the same, and restores
+whole old/new versions. Deleted captions do not advance the current figure/table
+counters or add entries to their lists. The revised preamble supplies styling;
+style-only changes should also be checked in the original-page viewer.
+
+Source comparison supports UTF-8 and ordinary, literal braced `input`/`include`
+paths inside the committed snapshot. Dynamic paths, `includeonly`, `subfile` and
+`import` need adaptation or the `pages` alternative. Put external images inside
+figure environments. Custom LaTeX macros/packages can still challenge latexdiff;
+build errors retain a local log and do **not** silently switch to a different look.
+No general PDF-to-LaTeX reconstruction is attempted.
 
 Text is extracted and matched across the whole document before pages are paired.
 This reduces false replacements when a paragraph moves onto another page. Page
@@ -200,12 +239,16 @@ your user permissions. The viewer is not designed for internet hosting.
 ```sh
 python -m unittest discover -s tests -v
 python examples/make_demo.py
+# Requires LaTeX, latexdiff and Perl:
+python examples/make_latex_demo.py
 ```
 
 Tests exercise inserted/deleted pages, reflow, visual-only changes, complete visual
 context, package integrity/traversal, read-only Git snapshots, default selection,
 monitor catch-up, and local HTTP access boundaries. GitHub Actions runs these
-checks on Windows and Linux. See [CONTRIBUTING.md](CONTRIBUTING.md).
+checks on Windows and Linux, plus a native LaTeX integration job. To run the latter
+locally, set `REPORTLENS_TEST_LATEX=1` before running the tests.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Built with [pdfplumber](https://github.com/jsvine/pdfplumber),
 [pypdfium2](https://github.com/pypdfium2-team/pypdfium2),

@@ -13,9 +13,9 @@ import zipfile
 DEFAULT_PATHS = ["*.tex", "*.bib", "*.sty", "*.cls", "*.png", "*.jpg", "*.jpeg", "*.pdf", "*.svg", "*.eps"]
 
 
-def run(args, cwd=None, timeout=120):
+def run(args, cwd=None, timeout=120, env=None):
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            timeout=timeout, shell=False, creationflags=0x08000000 if os.name == "nt" else 0)
+                            timeout=timeout, shell=False, env=env, creationflags=0x08000000 if os.name == "nt" else 0)
     if result.returncode:
         detail = (result.stderr or result.stdout).decode("utf-8", "replace")[-6000:]
         raise RuntimeError(f"{Path(args[0]).name} failed ({result.returncode}):\n{detail}")
@@ -33,6 +33,7 @@ class Config:
     output_pdf: str = ""
     output_directory: str = ".reportlens"
     poll_seconds: int = 15
+    latexdiff_command: list = field(default_factory=list)
 
     @classmethod
     def load(cls, path):
@@ -56,6 +57,8 @@ class Config:
             raise ValueError("Provide ordinary tracked path patterns.")
         if self.poll_seconds < 5:
             raise ValueError("Polling interval must be at least 5 seconds.")
+        if not isinstance(self.latexdiff_command, list) or not all(isinstance(x, str) and x for x in self.latexdiff_command):
+            raise ValueError("latexdiff_command must be a JSON argument array.")
 
 
 class Repository:
@@ -97,6 +100,18 @@ class Repository:
             raise ValueError("Two report-changing commits are needed. You can also compare two PDFs directly.")
         return versions[1]["commit"], versions[0]["commit"]
 
+    def snapshot(self, commit, root):
+        """Extract committed bytes only; never modify the working checkout."""
+        archive_bytes = self.git("-c", "core.autocrlf=false", "archive", "--format=zip", commit)
+        with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+            if sum(i.file_size for i in archive.infolist()) > 2 * 1024 ** 3:
+                raise ValueError("Git snapshot exceeds the 2 GB build limit.")
+            for info in archive.infolist():
+                parts = PurePosixPath(info.filename)
+                if parts.is_absolute() or ".." in parts.parts or "\\" in info.filename or ":" in info.filename or (info.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise ValueError("Unsafe path or symlink in Git snapshot.")
+            archive.extractall(root)
+
     def build(self, ref, progress=lambda _: None):
         commit = self.resolve(ref)
         identity = json.dumps({"commit": commit, "source": self.config.source,
@@ -111,17 +126,9 @@ class Repository:
         progress(f"Preparing committed snapshot {commit[:8]}")
         # Git archive can apply autocrlf even to ASCII-heavy PDFs when a
         # repository has no binary attributes. Preserve committed byte streams.
-        archive_bytes = self.git("-c", "core.autocrlf=false", "archive", "--format=zip", commit)
         with tempfile.TemporaryDirectory(prefix="reportlens-build-") as temp:
             root = Path(temp)
-            with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
-                if sum(i.file_size for i in archive.infolist()) > 2 * 1024 ** 3:
-                    raise ValueError("Git snapshot exceeds the 2 GB build limit.")
-                for info in archive.infolist():
-                    parts = PurePosixPath(info.filename)
-                    if parts.is_absolute() or ".." in parts.parts or "\\" in info.filename or ":" in info.filename or (info.external_attr >> 16) & 0o170000 == 0o120000:
-                        raise ValueError("Unsafe path or symlink in Git snapshot.")
-                archive.extractall(root)
+            self.snapshot(commit, root)
             source = root / self.config.source
             if not source.is_file():
                 raise ValueError(f"Source is absent in {commit[:8]}: {self.config.source}")

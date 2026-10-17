@@ -1,5 +1,28 @@
 # Verification history
 
+## Native LaTeX default - 2026-10-17
+
+The owner rejected the reflowed PDF's appearance. The default for `.tex`
+repositories now compiles a source diff with the report's own class, fonts,
+headings, margins, headers and captions. `merged` remains an explicit alternative;
+`pages` retains the original consecutive-page layout.
+
+- 46 local tests pass with native integration enabled. The native test compiles
+  a real committed LaTeX pair, including a changed image under the same filename,
+  a changed whole table, inline prose and cross-references. It verifies Latin
+  Modern fonts, whole old/new visuals, stable current numbering, package reopening,
+  byte-identical default PDF export, caching and an untouched dirty source checkout.
+- The existing report's latest comparison compiled in three LaTeX passes to a
+  53-page PDF. Final-pass references resolved; the retained epstopdf shell-escape
+  advisory is nonfatal. Original source files were not changed.
+- The public `latex-review` example uses only an invented garden report. It
+  includes the two source files, a native comparison PDF and portable package.
+- LaTeX source parsing, recursive/path-escaping input rejection, complete nested
+  visuals, image-byte changes, PDF-only error messages and legacy package opening
+  are also covered without requiring a compiler.
+- GitHub Actions now includes a separate native LaTeX integration job. Local
+  verification is distinct from the status of any particular CI run.
+
 ## Merged PDF default - 2026-10-17
 
 - 35 local tests pass on Windows/Python 3.13, including selectable inline

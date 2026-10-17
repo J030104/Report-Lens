@@ -28,8 +28,8 @@ def main():
     export.add_argument("package")
     export.add_argument("--output", required=True, help="Destination PDF filename")
     for command in (gui, compare, export):
-        command.add_argument("--pdf-layout", choices=("merged", "pages"), default="merged",
-                             help="PDF layout: merged prose (default) or consecutive original pages")
+        command.add_argument("--pdf-layout", choices=("auto", "latex", "merged", "pages"), default="auto",
+                             help="Default: native LaTeX for .tex repositories, merged for PDFs; pages retains the original-page alternative")
     args = parser.parse_args()
     try:
         if args.action == "export":
